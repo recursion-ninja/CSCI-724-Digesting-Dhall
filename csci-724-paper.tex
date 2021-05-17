@@ -3,14 +3,16 @@
 \usepackage{bashful}
 \usepackage{hyperref}
 
+%----------------------------------------------------------------------------------------
+%	Comment this out if you do not have `texcount` installed on your $PATH
+%----------------------------------------------------------------------------------------
 \bash
-texcount -sum -1 csci-724-paper.tex
+command -v texcount &> /dev/null && texcount -sum -1 csci-724-paper.tex
 \END
 
+
 %Shorthand formatting commands
-\newcommand{\F}[1]
-{$\quad$\texttt{#1}
-}
+\newcommand{\F}[1]{$\quad$\texttt{#1}}
 \newcommand{\A}{$\alpha$}
 \newcommand{\B}{$\beta$}
 \newcommand{\Bool   }{\texttt{Bool}}
@@ -53,6 +55,7 @@ In this paper, I explore the theoretical and practical underpinnings of Dhall as
 \vspace*{1mm}
 
 \hspace*{3.6mm}\textit{Word count:} {\footnotesize \bashStdout}
+
 
 \pagebreak
 

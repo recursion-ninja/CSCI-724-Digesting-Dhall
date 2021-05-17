@@ -2,7 +2,6 @@
 
 \usepackage{bashful}
 \usepackage{hyperref}
-\usepackage[colorinlistoftodos]{todonotes}
 
 \bash
 texcount -sum -1 csci-724-paper.tex
@@ -50,7 +49,7 @@ Dhall's unique language construction allows it to provide desirable run-time and
 In this paper, I explore the theoretical and practical underpinnings of Dhall as a configuration language.
 \end{abstract}
 
-\hspace*{3.6mm}\textit{Keywords:} {\footnotesize Dhall, functional programming, provable termination, hashing, recursion, recursive languages, semantic equivalence, strong normalization}
+\hspace*{3.6mm}\textit{Keywords:} {\footnotesize Dhall, functional programming, provable termination, hashing, recursion, recursive \hspace*{1cm} languages, semantic equivalence, strong normalization}
 \vspace*{1mm}
 
 \hspace*{3.6mm}\textit{Word count:} {\footnotesize \bashStdout}
@@ -110,7 +109,7 @@ As alluded to above, Dhall was originally conceived as a programmable language t
 In this manner, Dhall can be used as a structured templating language which compiles to one of the ``flat'' configuration file formats listed above.
 After the Dhall compilation engine produces a normalized value, it is passed to a ``format rendered'' corresponding to the desired output configuration file format.
 The format renders transforms the normalized value to a valid textual rendering of the specified file format.
-Some existing compilation targets are defined by the programs: \texttt{dhall-docker-compose} \cite{DhallDocker}, \texttt{dhall-to-json} \cite{DhallJSON}, \texttt{dhall-kubernetes} \cite{DhallKubernetes}, \texttt{dhall-nethack} \cite{DhallNethack}, \texttt{dhall-to-nix} \cite{DhallNix}, \texttt{dhall-openssl} \cite{DhallOpenSSL} \\ \texttt{dhall-to-xml} \cite{DhallXML}, and \texttt{dhall-to-yaml-ng} \cite{DhallYAML}.
+Some existing compilation targets are defined by the programs: \texttt{dhall-docker-compose} \cite{DhallDocker}, \texttt{dhall-to-json} \cite{DhallJSON}, \texttt{dhall-kubernetes} \cite{DhallKubernetes}, \texttt{dhall-nethack} \cite{DhallNethack}, \texttt{dhall-to-nix} \cite{DhallNix}, \texttt{dhall-openssl} \cite{DhallOpenSSL} \texttt{dhall-to-xml} \cite{DhallXML}, and \texttt{dhall-to-yaml-ng} \cite{DhallYAML}.
 
 Another prominent use case for Dhall is defining data for a program to \emph{natively} operate on.
 The native programming language will invoke the Dhall compilation engine and specify one or more Dhall source files.

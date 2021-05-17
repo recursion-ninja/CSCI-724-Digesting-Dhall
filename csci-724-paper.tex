@@ -85,7 +85,7 @@ These are jut two examples out of of a myriad of problems which a user may have 
 
 There have been some attempts to avoid a programable configuration language by instead resorting to a templating language, which when interpreted, will interpolate repeated values throughout the configuration file.
 One such popular example is Jsonnet \cite{JSONnet}.
-This initially appealing approach results in a Turing-complete interpreter, mitigating some of the problems inherent in a Turing complete configuration language.
+This initially appealing approach results in a Turing-complete interpreter which mitigated some of the problems inherent in a Turing-complete configuration language.
 However, it cannot avoid the intractable problems such as guaranteed termination.
 Moreover, The configuration files, annotated with keys and values to be interpreted, are no longer a valid syntax for the underlying ``flat'' configuration file format.
 Invariably, this results in custom, divergent parsers for the configuration files with interpolation annotations which often interplay in unexpected ways with the underlying configuration file's syntax.
@@ -103,7 +103,7 @@ I will also discuss the extent of expressiveness that a language can achieve wit
 \section*{Use cases}
 
 Dhall was designed with multiple use cases in mind.
-Each use case runs the Dhall compilation engine, which parses Dhall source code, applies static type checking, and then interprets the source code to normal form.
+Each use case runs the Dhall compilation engine, which parses Dhall source code, applies static type checking, and then rewrites the source code to normal form.
 What is done with the normal form expression of the source code depends on the compilation target, with each use case as a different compilation target generally.
 
 As alluded to above, Dhall was originally conceived as a programmable language to replace under-specified templating interpreters.
@@ -160,7 +160,7 @@ For a rewrite system to be strongly normalizing, it must be the case that every 
 When all rewrite sequences have terminated, the resulting values are considered in \emph{normal form}.
 Dhall choose to define its decidability via a strong normalization property rather than Walther recursion for two reasons.
 I will explore one intriguing reason in the code integrity section below.
-The most important reason, however, is that strong normalization constitutes a constructive proof of termination for each valid program, hence avoiding the problematic realities of the halting problem and employing Walther's analytic method.
+The most important reason, however, is that strong normalization constitutes a constructive proof of termination for each valid program, hence avoiding the undesirable realities of the halting problem and employing Walther's analytic method.
 
 
 While Dhall has defined its theoretical decidability via strong normalization, there were other practical considerations to ensure that Dhall is a total language.

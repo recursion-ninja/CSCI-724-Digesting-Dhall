@@ -2,6 +2,7 @@
 
 \usepackage{bashful}
 \usepackage{hyperref}
+\usepackage[colorinlistoftodos]{todonotes}
 
 \bash
 texcount -sum -1 csci-724-paper.tex
@@ -14,7 +15,7 @@ texcount -sum -1 csci-724-paper.tex
 \newcommand{\A}{$\alpha$}
 \newcommand{\B}{$\beta$}
 \newcommand{\Bool   }{\texttt{Bool}}
-\newcommand{\Nat    }{\texttt{Nat}}
+\newcommand{\Nat    }{\texttt{Natural}}
 \newcommand{\Integer}{\texttt{Integer}}
 \newcommand{\Double }{\texttt{Double}}
 \newcommand{\List   }{\texttt{List}}
@@ -43,10 +44,10 @@ texcount -sum -1 csci-724-paper.tex
 %\renewcommand{\abstractname}{Summary} % Uncomment to change the name of the abstract to something else
 
 \begin{abstract}
-We will explore the theoretical and practical underpinnings of Dhall, a configuration language.
 Dhall is a purely functional, strongly typed, strongly normalizing, total programming language.
-Dhall has uses as a build system component and as a structured templating language alternative to configuration files.
+It has uses as a build system component and as a structured templating language alternative to configuration files.
 Dhall's unique language construction allows it to provide desirable run-time and security guarantees.
+In this paper, I explore the theoretical and practical underpinnings of Dhall as a configuration language.
 \end{abstract}
 
 \hspace*{3.6mm}\textit{Keywords:} {\footnotesize Dhall, functional programming, provable termination, hashing, recursion, recursive languages, semantic equivalence, strong normalization}
@@ -62,31 +63,32 @@ Dhall's unique language construction allows it to provide desirable run-time and
 
 \section*{Introduction}
 
-Dhall is a programming language created by Gabriel Gonzalez and initially released it's \texttt{v1.0.0} version on Jul 17, 2018 \cite{Dhall2018}.
-Since it's inception, Dhall has had 22 releases with a current version of \texttt{v20.1.0} \cite{Dhall2018}.
-It was designed with a fairly unique combination of language properties.
+Dhall is a programming language created by Gabriel Gonzalez with its initial released \texttt{v1.0.0} version on Jul 17, 2018 \cite{Dhall2018}.
+Since its inception, Dhall has made 22 releases with a current version of \texttt{v20.1.0} \cite{Dhall2018}.
+It was designed with a unique combination of language properties.
 Dhall is a purely functional \cite{sabry_1998}, strongly typed \cite{cardelli1989typeful}, strongly normalizing \cite{baader1999term}, total \cite{turner1995elementary} programming language.
-Each one of these language properties represents an important theoretical decision for Dhall to meet it's design goals.
+Each one of these language properties represents an important theoretical decision for Dhall to meet its design goals.
 
 Dhall's original conception was to replace duplication in configuration files.
-Many modern software deployment techniques require large, often byzantine configurations file; much of which is composed of duplicated prefixes or records.
+Many modern software deployment techniques require large, often byzantine configurations file; \cite{cuperus1995automatic} much of which is composed of duplicated prefixes or records.
 Amazon Web Services, Microsoft Azure, and other such hosting services require these configuration files to inform the host how a client's server and software are to be deployed.
 Kuberntes \cite{Kubernetes2015} and Docker \cite{Barbier2014} are two deployment systems which also require complex configuration files for commercial software deployment.
-Each of these hosting services or deployment systems accept ``flat'' configuration files of JSON \cite{ecma2017standard}, YAML \cite{ben2009yaml}, XML \cite{bray2000extensible}, or INI dialects such as TOML \cite{TOML}.
+Each of these hosting services or deployment systems accepts ``flat'' configuration files of JSON \cite{ecma2017standard}, YAML \cite{ben2009yaml}, XML \cite{bray2000extensible}, or INI dialects such as TOML \cite{TOML}.
 These configuration files are described as ``flat'' in the sense that they are uninterpreted and each structured field is read literally \footnote{some minor interpretation may exist in ``flat'' configuration formats for constructing circular data structures}.
 Because the file formats are ``flat,'' they lack the expressive power to specify a shared prefix as a term, and substitute the term in the place of all shared prefixes.
 This lack of expressive power has real world consequences of deployment failures and security breaches due to human error in managing this cumbersome duplication \cite{Fugue2020}.
 
-In contrast to the ``flat'' configuration files, there exists very little exploration into fully programmable configuration files.
+In contrast to the ``flat'' configuration files, there is very little exploration into fully programmable configuration files.
 The main decrying voices, rightly so, espouse the mantra that ``configuration files should not be Turing-complete.'' A Turing-complete \cite{turing1937computable} configuration file does present many theoretical and practical problems.
-Some readily apparent problems are that the configuration file, when interpreted, may never terminate or may execute malicious code.
+For example, the configuration file, when interpreted, may never terminate or may execute malicious code.
 These are jut two examples out of of a myriad of problems which a user may have to account for when using a Turing-complete configuration language.
 
-There exist some attempts to avoid a programable configuration language by instead resorting to a templating language, which when interpreted, will interpolate repeated values throughout the configuration file.
+There have been some attempts to avoid a programable configuration language by instead resorting to a templating language, which when interpreted, will interpolate repeated values throughout the configuration file.
 One such popular example is Jsonnet \cite{JSONnet}.
-While initially appealing, this approach results in a Turing-complete interpreter, mitigating some of the problems inherent in a Turing complete configuration language, but failing to avoid the intractable problems such as guaranteed termination.
-Moreover, The configuration files annotated with keys and values to be interpreted are no longer a valid syntax for the underlying ``flat'' configuration file format.
-Invariably , this results in custom, divergent parsers for the configuration files with interpolation annotations which often interplays in unexpected ways with the underlying configuration file's syntax.
+This initially appealing approach results in a Turing-complete interpreter, mitigating some of the problems inherent in a Turing complete configuration language.
+However, it cannot avoid the intractable problems such as guaranteed termination.
+Moreover, The configuration files, annotated with keys and values to be interpreted, are no longer a valid syntax for the underlying ``flat'' configuration file format.
+Invariably, this results in custom, divergent parsers for the configuration files with interpolation annotations which often interplay in unexpected ways with the underlying configuration file's syntax.
 
 Considering the reality of these use cases, a natural question arises.
 Can we design a language which does not have the undesirable properties that come with Turing-completeness, has a well defined and holistic syntax rather than a ``layered'' syntax from a templating engine, yet still has some of the desirable properties required to reduce duplication within a configuration file? Dhall is the a proposed answer to this question.
@@ -94,29 +96,29 @@ Can we design a language which does not have the undesirable properties that com
 Dhall proudly advertises itself as a ``not Turing-complete'' language.
 It has been, and will likely remain, the most memorable marketing sound-bite for the language.
 In truth however, the avoidance of Turing-completeness has interesting theoretical underpinnings which happen to solve a prevalent problem in the software industry.
-Few, if any, other not Turing-complete languages, have escaped from academia and shown practical use in industry.
-We will explore how Dhall's abstinence from the expressive power of Turing-completeness manages to avoid the practical and theoretical concerns espoused with a programmable configuration language.
-We will also discover the extent of expressiveness which a language can achieve without being Turing-complete.
+Few, if any, other not Turing-complete languages, have been able to leap out of academia and show practical use in industry \cite{CoFu92,hammond2003hume, mcbride2004epigram}.
+In this paper, I will explore how Dhall's abstinence from the expressive power of Turing-completeness manages to avoid the practical and theoretical concerns espoused with a programmable configuration language.
+I will also discuss the extent of expressiveness that a language can achieve without being Turing-complete.
 
 \section*{Use cases}
 
-Dhall has been designed with multiple use cases in mind.
-Each use case runs the Dhall compilation engine, which parses Dhall source code, applies static type checking, then interprets the source code to normal form.
-What is done with the normal form expression of the source code depends on the compilation target; each use case generally being a different compilation target.
+Dhall was designed with multiple use cases in mind.
+Each use case runs the Dhall compilation engine, which parses Dhall source code, applies static type checking, and then interprets the source code to normal form.
+What is done with the normal form expression of the source code depends on the compilation target, with each use case as a different compilation target generally.
 
 As alluded to above, Dhall was originally conceived as a programmable language to replace under-specified templating interpreters.
 In this manner, Dhall can be used as a structured templating language which compiles to one of the ``flat'' configuration file formats listed above.
-After the Dhall compilation engine produces a normalized value, it is passed to a `format rendered'' corresponding to the desired output configuration file format.
+After the Dhall compilation engine produces a normalized value, it is passed to a ``format rendered'' corresponding to the desired output configuration file format.
 The format renders transforms the normalized value to a valid textual rendering of the specified file format.
-Some existing compilation targets are defined by the programs: \texttt{dhall-docker-compose} \cite{DhallDocker}, \texttt{dhall-to-json} \cite{DhallJSON}, \texttt{dhall-kubernetes} \cite{DhallKubernetes}, \texttt{dhall-nethack} \cite{DhallNethack}, \texttt{dhall-to-nix} \cite{DhallNix}, \texttt{dhall-openssl} \cite{DhallOpenSSL} \texttt{dhall-to-xml} \cite{DhallXML}, and \texttt{dhall-to-yaml-ng} \cite{DhallYAML}.
+Some existing compilation targets are defined by the programs: \texttt{dhall-docker-compose} \cite{DhallDocker}, \texttt{dhall-to-json} \cite{DhallJSON}, \texttt{dhall-kubernetes} \cite{DhallKubernetes}, \texttt{dhall-nethack} \cite{DhallNethack}, \texttt{dhall-to-nix} \cite{DhallNix}, \texttt{dhall-openssl} \cite{DhallOpenSSL} \\ \texttt{dhall-to-xml} \cite{DhallXML}, and \texttt{dhall-to-yaml-ng} \cite{DhallYAML}.
 
 Another prominent use case for Dhall is defining data for a program to \emph{natively} operate on.
 The native programming language will invoke the Dhall compilation engine and specify one or more Dhall source files.
 The normalized value resulting from the Dhall compilation engine is then marshaled to the types of the native programming language.
 This method of reading in data may be preferable to defining the data within the native language.
 One advantage is that data compiled by Dhall is guaranteed to terminate in finite time, given that Dhall is a total functional language.
-Another advantage it that specifying the data may be more maintainable in Dhall, as it can be more human readable than the native language, which allows the data to be maintained by individuals not fluent in the native language.
-There are other interesting security properties that Dhall provides, which we will explore later, that can make defining data in Dhall preferable to the native language.
+Another advantage is that specifying the data may be more maintainable in Dhall, as it can be more human readable than the native language, which allows the data to be maintained by individuals not fluent in the native language.
+There are other interesting security properties that Dhall provides, which I will explore later, that can make defining data in Dhall preferable to the native language.
 A non-exhaustive list of marshaling libraries for Dhall source code exist for the following languages: Bash \cite{DhallBash}, Clojure \cite{DhallClojure}, Go \cite{DhallGo}, Haskell \cite{DhallHaskell}, Ruby \cite{DhallRuby} and Rust \cite{DhallRust}.
 
 The final adopted use case for Dhall is as a build system component.
@@ -134,50 +136,52 @@ Once all requirements are considered holistically, the imposed constraints narro
 The first requirement of Dhall is that compiling the source code must be guaranteed to terminate in finite time.
 This requirement alone rules out a Turing-complete language as a candidate solution, given the intractability of the halting problem \cite{turing1937computable}.
 Our candidate language must be a recursive language \cite{yu1997regular}, also known as a decidable language or Turing-decidable language.
-For a recursive language there must exist a Turing machine which, when given an finite input string, always halts and either accepts if the string is in the language or rejects if it is not in the language.
+For a recursive language, there must be a Turing machine which, when given a finite input string, always halts and either accepts or rejects, depending on whether the string is in the language.
 Such a Turing machine is often called a \emph{decider} \cite{10.1145/230514.571645} or \emph{total Turing machine} \cite{kozen1997more}, as the machine is able to definitively ``decide'' if a string is in the language.
 The Dhall compilation engine is such a total Turing machine.
 It should be obvious from the definition that a recursive language is exactly the subset of Turing-complete languages for which the halting problem is not undecidable.
 As we can see, the first constraint alone has interesting theoretical implications.
 
 There are a few well known techniques for constructing a regular language.
-The first is Walther Recursion \cite{walther1994proving}, a method of analyzing recursive function to decide that they terminate.
-Walther lays out a a detailed description of this methodology in his paper, but to simplify the technique; Whalther recursion requires that all inputs to a function be finite, and that recursive calls only operate on a ``substructure'' of the inputs.
+The first is Walther Recursion \cite{walther1994proving}, a method of analyzing recursive function to decide whether they terminate.
+Walther lays out a detailed description of this methodology in his paper, but to simplify the technique, Walther recursion requires that all inputs to a function be finite, and that recursive calls only operate on a ``substructure'' of the inputs.
 This methodology allows for a natural recursive programming in most cases, while constraining the program from general recursion which may produce an infinite loop.
 Dhall inherits some of the ideas from Whalther recursion, by disallowing general recursion within the language.
 In fact, Dhall does not allow user defined recursion.
-Instead, Dhall exposes a collection of ``safe'' catamorphisms \cite{meijer1991functional} which users can apply to their data when they require a functional fold \footnote{also called ``reduce'' or ``flatten''}.
-By disallowing user defined recursion Dhall prevents user defined infinite data structures and computations, such as anamorphisms \cite{meijer1991functional}.
-We should note that while Dhall takes some inspiration from Whalter recursion, Dhall does not use Whalther's analytical methods to prove termination.
-Due to the halting problem, there exist some programs which terminate that Whather's analytical method cannot prove termination for.
-Instead, Dhall has defined the language to be ``strongly normalizing.''
+Instead, Dhall exposes a collection of ``safe'' catamorphisms \cite{meijer1991functional} which users can apply to their data when they require a functional fold \footnote{also called ``reduce'' or ``flatten''.}.
+By disallowing user defined recursion, Dhall prevents user defined infinite data structures and computations, such as anamorphisms \cite{meijer1991functional}.
+It is noteworthy that while Dhall takes some inspiration from Walther recursion, it does not use Whalther's analytical methods to prove termination.
+Due to the halting problem, there are some programs that terminate for which Walther's analytical method cannot prove termination.
+Instead, Dhall defines the language to be ``strongly normalizing.''
 
 Dhall is defined as a rewrite system, substituting terms and expanding terms where they are referenced.
 What separates Dhall from less sophisticated rewrite systems, such as the templating engines it seeks to replace, is that Dhall's rewrite system has the \emph{strong normalizing property} \cite{bergstra1982strong}.
-For a rewrite system to be strongly normalizing, it must be the case that every rewrite sequence is guaranteed to eventually yield an irreducible term, and hence terminate.
-When all rewrite sequences have terminated, the resulting values is considered in \emph{normal form}.
-Dhall choose to define it's decidability via a strong normalization property rather than Whalther recursion for two reasons.
-One intriguing reason we will explore in the code integrity section below.
-The most important reason, is that strong normalization constitutes a constructive proof of termination for each valid program, hence avoiding the problematic realities of the halting problem and employing Whalther's analytic method.
+For a rewrite system to be strongly normalizing, it must be the case that every rewrite sequence is guaranteed to eventually yield an irreducible term, therefore terminate.
+When all rewrite sequences have terminated, the resulting values are considered in \emph{normal form}.
+Dhall choose to define its decidability via a strong normalization property rather than Walther recursion for two reasons.
+I will explore one intriguing reason in the code integrity section below.
+The most important reason, however, is that strong normalization constitutes a constructive proof of termination for each valid program, hence avoiding the problematic realities of the halting problem and employing Walther's analytic method.
 
 
-While Dhall has defined it's theoretical decidability via strong normalization, there were other practical considerations to ensure that Dhall is a total language.
-The chief concern was the technique exceptions widely used by modern programming languages.
-Dhall has chosen not to support \emph{any} exceptions when compiling it's source code to normal form.
+While Dhall has defined its theoretical decidability via strong normalization, there were other practical considerations to ensure that Dhall is a total language.
+The chief concern was the ``feature'' of exceptions widely used by modern programming languages.
+Dhall has chosen not to support \emph{any} exceptions when compiling its source code to normal form.
 This has many nuanced implications which permate other aspects of Dhall's design.
 For instance, Dhall supports numeric types and arithmetic operations.
 Traditionally, a division by zero operation would throw an exception.
-Because of cases like this, Dhall has taken great case in defining what arithmetic operations are supported on which numeric types to ensure totality and closure of each arithmetic operation.
+Because of cases like this, Dhall has taken to great length to define what arithmetic operations are supported on which numeric types to ensure totality and closure of each arithmetic operation.
 
 \section*{Purely Functional}
 
 Dhall operates under the functional programming paradigm.
 Dhall describes itself as a purely functional programming language.
-While the precise definition of a purely functional programming language is still a matter of contention \cite{sabry1998purely}, Dhall legitimizes its purely functional claim in a few ways.
-Dhall supports first-class functions \cite{abelson1996structure}, allowing functions to be bound to values and passed as arguments to other functions.
-Dhall also supports higher order functions, functions which may return a function as it's result.
-It also supports partial function application \cite{curry1958combinatory} or``currying,'' where $k$ fewer arguments than the arity \cite{hazewinkel2011encyclopaedia} of the function are supplied and instead of returning the function's result, it returns a new function with arity equal to the original function's arity minus $k$ that returns the original functions result.
-These collection of language features give Dhall great expressive power and provide appreciable user convince.
+While the precise definition of a purely functional programming language is still a matter of contention \cite{sabry1998purely}, Dhall legitimizes its purely functional claim in several ways.
+Dhall supports first-class functions \cite{abelson1996structure}, allowing functions to be bounedd to values and passed as arguments to other functions.
+Dhall also supports higher order functions, which may return a function as its result.
+It also supports partial function application \cite{curry1958combinatory} or``currying.''
+Currying occurs when $k$ fewer arguments than the arity \cite{hazewinkel2011encyclopaedia} of the function are supplied and instead of returning the function's result, the partial application instead returns a new function with arity $k$.
+This resulting function will return the original function's result when the remaining $k$ arguments are supplied to it.
+This collection of language features gives Dhall great expressive power and provides appreciable user convenience.
 
 
 Another feature of Dhall is the concept of immutable data \cite{driscoll1989making}.
@@ -186,82 +190,83 @@ All term bindings in Dhall are immutable with no mechanism for mutable variables
 Instead Dhall encourages users to transform data using higher order functions or it's supplied catamorphisms.
 
 The functional programming paradigm and immutable data pairs naturally with the decision to make Dhall a strongly normalizing rewrite system.
-The lack of mutability allows Dhall to use the Continuation Calculus \cite{geron2013continuation} (CC) to model it's compilation to normal form.
-The CC provides a deterministic model of computation for evaluating terms incrementally while maintaining a proof of termination.
-In this way Dhall's compilation engine uses CC to efficiently compile source code to normal form via repeated rewrites and expansions while provably terminating.
-The purely functional properties of Dhall provide it a user experience mirroring a fully functional programming language while maintaining it's theoretical and practical termination requirements.
+The lack of mutability allows Dhall to use the Continuation Calculus \cite{geron2013continuation} (CC) to model its compilation to normal form.
+CC provides a deterministic model of computation for evaluating terms incrementally while maintaining a proof of termination.
+This way Dhall's compilation engine uses CC to efficiently compile source code to normal form via repeated rewrites and expansions while provably terminating.
+The purely functional properties of Dhall provide a user experience mirroring a fully functional programming language while maintaining its theoretical and practical termination requirements.
 
 \section*{Types}
 
 Dhall is a strongly typed language.
-This is not surprising as Dhall evaluates all of it's source code at compile time when rewriting terms to normal form.
-Given the guaranteed termination property, this means that there cannot be an unchecked runtime error, providing true \emph{type safely} as defined by Cardelli \cite{cardelli1989typeful} or \emph{program security} as defined by Hoare \cite{hoare1973hints}.
+This is not surprising as Dhall evaluates all of its source code at compile time when rewriting terms to normal form.
+Given the guaranteed termination property, this means that there cannot be an unchecked runtime error, providing true \emph{type safety} as defined by Cardelli \cite{cardelli1989typeful} or \emph{program security} as defined by Hoare \cite{hoare1973hints}.
 
 Dhall provides a set of useful, common types and corresponding functions.
-Dhall also provides syntax for a user to create their own types, including sum types, records, enumerations, and even generalized algebraic data types \cite{cheney2003first}.
-This gives the users the expressive power to precisely model their data with Dhall's type system and leverage it to eliminate common errors, similar the Haskell or ML.
+It also provides syntax for a user to create their own types, including sum types, records, enumerations, and even generalized algebraic data types \cite{cheney2003first}.
+This gives users the expressive power to precisely model their data with Dhall's type system and leverage it to eliminate common errors, similar to Haskell or ML.
 
-Among the provided types which are defined by the Dhall language are: \Bool{}, \Nat{}, \Integer{}, \Double{}, \texttt{Text}, and \List{}.
+Among the provided types defined by the Dhall language are: \Bool{}, \Nat{}, \Integer{}, \Double{}, \texttt{Text}, and \List{}.
 Some care should be spent on exploring the permissible operations on these types to ensure that each operation is total.
-From this we many gain some new insight on viewing numeric types.
+From this we may gain some new insight on viewing numeric types.
 
 The type \Bool{} has the values \texttt{True} and \texttt{False} along with the operators $=, \ne, \land, \lor$.
-A moderate understanding of abstract algebra will allow us to see that the \Bool{} is closed under all operations, and that $\land$ and $\lor$ conveniently form a commutative ring \cite{noether1921idealtheorie}.
-Unsurprisingly \Bool{} is used for control flow within many of Dhall's keywords, making the totality of this type and it's operators part of the language definition.
+A moderate understanding of abstract algebra will allow us to see that \Bool{} is closed under all operations, and that $\land$ and $\lor$ conveniently form a commutative ring \cite{noether1921idealtheorie}.
+Unsurprisingly \Bool{} is used for control flow within many of Dhall's keywords, making the totality of this type and its operators part of the language definition.
 
-The type \Nat{} contains all non-negative, integral values; corresponding to our intuition of the natural numbers $\mathbb{N}$.
+The type \Nat{} contains all non-negative and integral values, corresponding to our intuition of the natural numbers $\mathbb{N}$.
 The type \Nat{} is defined with infinite precision, limited only by the constrains of the hardware the compiler runs on, unlike a fixed with integral type such as \texttt{uint\_64} in the C programming language.
 \Nat{} has only the $+$ and $\times$ arithmetic operators defined.
 Again, abstract algebra shows us \Nat{} is closed under both arithmetic operations, and that $+$ and $\times$ form a commutative ring.
 
-While the \Nat{} type might have been excluded from the Dhall language specification, it has instead been designated as the default integral.
-Dhall uses \Nat{} to specify repetition and as the result of operations which involve ``counting.'' This stands in notable contrast to most modern programming languages which use \emph{signed} integral values as the language default.
+While the \Nat{} type might have been excluded from the Dhall language specification, it has instead been designated as the default integral type.
+Dhall uses \Nat{} to specify repetition and as the result of operations which involve ``counting.'' This stands in notable contrast to most modern programming languages, which use \emph{signed} integral values as the language default.
 The lack of negative numbers allows $0$ to be used as a base case for structured recursion, beginning at a positive values and apply recursive steps with the \Nat{} value monotonically decreasing until reaching $0$.
-Dhall uses such technique as a way to verify that it's provided catamorphisms terminate.
+Dhall uses such technique as a way to verify that its provided catamorphisms terminate.
 
-We can note that Dhall excludes the elementary arithmetic operators $-$ and $\div$.
-This occurs because there is no way to define $-$ for \Nat{} which is both closed and total.
+We should note that Dhall excludes the elementary arithmetic operators $-$ and $\div$.
+This occurs because there is no way to define $-$ for \Nat{}, which is both closed and total.
 If $-$ were total, it would have to return an ``optional'' type with a default value if the minuend is less than the subtrahend.
-If $-$ were closed, it would have to either throw an exception or have behavior which violates the laws of an algebraic field when the minuend is less than the subtrahend.
-Similarly, if $\div$ were total, attempting to apply $\div$ to two \Nat{} values would have to return a tuple with the quotient and the remainder if the dividend is not a multiple of the divisor.
-If $\div$ were closed, it would have to discard the remainder and the laws of an algebraic field if the dividend is not a multiple of the divisor.
-Even if these deficiencies with $\div$ were reconciled, the behavior for $\div$ with a divisor of $0$ is not well defined in mathematics, often varying among sub-disciplines and applications, but almost always the behavior involves the value $\inf$ which is not included in the type \Nat{}.
-For these reasons, only $+$ and $\times$ are defined for $Natural$.
+And if $-$ were closed, it would have to either throw an exception or have behavior which violates the laws of an algebraic field when the minuend is less than the subtrahend.
+Similarly, if $\div$ were total, attempting to apply $\div$ to two \Nat{} values would have to return a tuple with the quotient and the remainder, if the dividend is not a multiple of the divisor.
+In that same situation, if $\div$ were closed, it would have to discard the remainder and the laws of an algebraic field.
+Even if these deficiencies with $\div$ were reconciled, the behavior for $\div$ with a divisor of $0$ is not well defined in mathematics, often varying among sub-disciplines and applications, but almost always the behavior involves the value $\infty$ which is not included in the type \Nat{}.
+For these reasons, only $+$ and $\times$ are defined for \Nat{}.
 There is a function \texttt{subtract} defined for \Nat{} by the language which subtracts the first argument from the second argument, clamping to $0$ if the result is negative.
-This behavior is intentionally provided as a function instead of as an infix operator to discourage it's use.
+This behavior is intentionally provided as a function instead of as an infix operator to discourage its use.
 Given the difficulty of consistently defining division by zero, $\div$ is omitted entirely from the language.
 
 Dhall provides a type \Integer{} which contains all integral values; corresponding to our intuition of the natural numbers $\mathbb{Z}$.
-Integer however is treated as less preferable to \Nat{} by the language.
-To perform arithmetic on \Integer{}, each value must first be explicitly converted to a \Nat{} via the \texttt{clamp} function which discards the sign then converted back to a \Integer{} via the \texttt{toIntger} function.
+It is, however, considered less preferable to \Nat{} by the language.
+To perform arithmetic on \Integer{}, each value must first be explicitly converted to a \Nat{} via the \texttt{clamp} function, which discards the sign, then converted back to an \Integer{} via the \texttt{toInteger} function.
 This effectively limits the types of arithmetic that can be performed on \Integer{} to the safe operations which can be performed on \Nat{}.
-This has a dual effect.
+This design has dual effects.
 The first is practical, easily proving the type safety of \Integer{} arithmetic by literally reducing it to the proven safe \Nat{} arithmetic.
 The second effect is social, discouraging uses from complex arithmetic computations in Dhall unless absolutely necessary.
 
 Dhall provides the type \Double{} which corresponds to the IEEE 754 floating point number format \cite{30711}.
 While Dhall accepts creating \Double{} value literals, it does not support any arithmetic operations on the \Double{} type.
-This is because the IEEE format describes exceptional behavior when performing arithmetic and Dhall must not throw any exceptions to maintain it's classification as a recursive language.
+This is because the IEEE format describes exceptional behavior when performing arithmetic and Dhall does not throw any exceptions to maintain its classification as a recursive language.
 Dhall cleverly only accepts parseable \Double{} values in source code files to be converted to immutable and inoperable \Double{} literal values, relying on the parser to accept or reject valid \Double{} values.
 Some non arithmetic operations, such as rendering to \texttt{Text} are provided for \Double{}.
-The type \Double{} is primarily defined for more convenient and direct marshaling values to and from other programming languages, rather than requiring the hos language to attempt to reconstruct an approximated floating point values provided by Dhall in the from of \Nat{} and \Integer{} values.
+The type \Double{} is primarily defined for more convenient and direct marshaling of values to and from other programming languages, rather than requiring the receiving language to attempt reconstructing an approximated floating point values provided by Dhall in the from of \Nat{} and \Integer{} values.
 
-Dhall defined \texttt{Text} as it's default ``string'' type.
-The type \texttt{Text} fully support unicode, being conceptually a finite sequence of unicode characters.
+Dhall defined \texttt{Text} as its default ``string'' type.
+The type \texttt{Text} fully support unicode, and is conceptually a finite sequence of unicode characters.
 \texttt{Text} has only two significant operators provided, $\diamond$ and \texttt{replace}.
 The $\diamond$ operator performs concatenation, forming a monoid \cite{cayley1863xxi} over \texttt{Text}.
-The function \texttt{replace} has arity of $3$; the \texttt{Text} value to match, the \texttt{Text} value replacement, and the \texttt{Text} value in which to substitute all matches with the replacement.
+The function \texttt{replace} has an arity of $3$: the \texttt{Text} value to match, the \texttt{Text} value replacement, and the \texttt{Text} value in which to substitute all matches with the replacement.
 \texttt{Text} is defined by Dhall as the result type for rendering all other language defined types to a human-readable format.
 
 The last important type the Dhall language defines is \texttt{List$\,\alpha$}, an ordered sequence of elements.
-The type \texttt{List$\,\alpha$} is polymorphic in it's type $\alpha$.
-The type  \texttt{List$\,\alpha$} is the principle mode of recursion in Dhall, as all provided catamorphisms operate on the type \texttt{List$\,\alpha$} and user defined recursion is prohibited.
+The type \texttt{List$\,\alpha$} is polymorphic in its type $\alpha$.
+The type  \texttt{List$\,\alpha$} is the principle mode of recursion in Dhall, as all provided catamorphisms operate on the type \texttt{List$\,\alpha$} and user defined recursions are prohibited.
 The creation and consumption of \texttt{List$\,\alpha$} values constitute the control flow mechanism for Dhall.
 The exposed catamorphisims from the \texttt{Prelude} module are carefully defined and proven to be total functions.
 This design requires users of Dhall to only perform safe, and finite creation and consumption of data structures.
 Some example catamorphisms are shown in Table \ref{tab:catamorphisms}.
 
 \begin{table}[h]
+	\centering
 		\begin{tabular}{ |l|llll| } 
 			\hline
 			Name & \multicolumn{4}{l}{Arity} \vline \\
@@ -277,13 +282,13 @@ Some example catamorphisms are shown in Table \ref{tab:catamorphisms}.
 			\F{take} &  \Nat{} & $\rightarrow$ \List{} \A &$\rightarrow$ \List{} \A & \\
 			\hline
 		\end{tabular}
-	\caption{Table of some Dhall provided catamorphisms}
+	\caption{Some Dhall provided catamorphisms}
 	\label{tab:catamorphisms}
 \end{table}
 
 While exploring Dhall's type system and built-in types, we have seen how the total function requirement has dramatically affected the operations permitted on types.
-Perhaps surprisingly, the requirement of totality has limited the allowable arithmetic operations a user can perform within Dhall.
-However, equally surprisingly, the termination requirement does not limit the user from recursive programming, provided that they define all recursion over lists and in the form of selected catamorphisms which are proven to terminate.
+The requirement of totality has effects so pervasive that it limits the allowable arithmetic operations a user can perform within Dhall.
+However, surprisingly, the termination requirement does not limit the user from recursive programming, provided that they define all recursion over lists and in the form of selected catamorphisms which are proven to terminate.
 Given the design use cases of Dhall laid out above, none of these arithmetic or recursive restrictions form theoretical or practical impediments.
 Quite the opposite, the amount of expressiveness permitted by Dhall's type system is more than sufficient for a language's use as structured templating engine, data definition, or build system specification.
 
@@ -291,7 +296,7 @@ Quite the opposite, the amount of expressiveness permitted by Dhall's type syste
 
 Dhall as a language has numerous safety features specified to ensure the integrity of the executed code.
 A great amount of this security focus has been directed at Dhall's module import feature.
-Dhall allows for other Dhall code to be imported from files on relative or absolute file paths and interestingly as well as from remote URIs.
+Dhall allows other Dhall code to be imported from files on relative or absolute file paths, and interestingly, as well as remote URIs.
 This very liberal code import design choice required Dhall to consider and define protection for code injection \cite{ray2012defining}, cross-site scripting (XSS) \cite{klein2005dom}, and server-side request forgery (SSRF) \cite{huang2003web}.
 While these specifications are interesting from an information security perspective, they are not related to the our computational theory inquiry.
 Fortunately, Dhall does have one additional safety feature for us to explore.
@@ -303,8 +308,8 @@ There are a countably infinite number of programs which can be reduced to the em
 We can consider the trivially simple program \texttt{replace "a" "" "aaa"}.
 Note that there are a countably infinite number of strings composed of only \texttt{'a'} characters which could be supplied as the third parameter to the function \texttt{replace}.
 Knowing this about the infinite derivation of the empty string, we should note that the empty string is an identity element under concatenation.
-Put differently, one can concatenate the empty string any other the normal form and the result will be the original normal form.
-Hence we have shown that any other that all normal forms have a countably infinite number of programs which can be compiled to it.
+Put differently, one can concatenate the empty string to any other normal form and the result will be the original normal form.
+Now we have shown that any other that all normal forms have a countably infinite number of programs which can be compiled to it.
 Understanding this leads to the beauty of the last security feature of Dhall, semantic hashing.
 
 All Dhall code compiles, deterministically, to a normal form.
@@ -315,28 +320,29 @@ This mechanical process has wonderful applications for code integrity.
 
 The Dhall language defines a semantic hash for a valid Dhall program to be the SHA3-256 \cite{dworkin2015sha, bertoni2013keccak} digest of the program's compiled normal form.
 But what does a \emph{semantic} hash mean?
-Dhall's semantic hashing definition means that if two programs have the same semantic hash value, they have the same compiled normal form, regardless of the input source code.
+Dhall's semantic hashing means that if two programs have the same semantic hash value, they have the same compiled normal form, regardless of the input source code.
 Because all Dhall programs are guaranteed to terminate in finite time, and the semantic hashing operation also terminates in finite time, \emph{all} Dhall programs can be checked efficiently for semantic equality.
-It does not matter which pair of the infinite possible program definitions are chosen, Dhall can decide of the input programs are semantically the same in finite time \footnote{Ignoring statistically unlikely hash collisions}.
+It does not matter which pair of the infinite possible program definitions is chosen, Dhall can decide if the input programs are semantically the same in finite time \footnote{Ignoring statistically unlikely hash collisions.}.
 This semantic equivalence check is possible precisely because of Dhall's guaranteed termination and strongly normalizing property.
 
 Dhall's semantic hashing has a few useful applications.
-The first is that authors of Dhall can refactor source code and assert that the semantic hash is the same before and after the refactoring transformation to ensure that no semantic changes were made to the source code.
-The second is that imported Dhall code can be checked against an expected semantic hash to ensure that the imported code is exacted the expected code.
-This later use is exceptionally useful given Dhall's liberal import policy of injecting code from any specified and accessible file or URI.
-If an imported file or URI changes the code being imported, the semantic hash will be different from the expected hash and the importing program will reject the code causing the program to halt and reject rather than continue compiling to the program's normal form.
-In this way, Dhall's semantic hash provides security that imported code can never be updated in a manner which changes the importing program's semantics, regardless of how the imported code is refactored.
+The first is that authors of Dhall can refactor source code and assert that the semantic hash is the same, before and after the refactoring transformation, to ensure that no semantic changes were made to the source code.
+The second is that imported Dhall code can be checked against an expected semantic hash to ensure that the imported code is exactly the expected code.
+This latter use is exceptionally useful given Dhall's liberal import policy of injecting code from any specified and accessible file or URI.
+If an imported file or URI changes the code being imported, the semantic hash will be different from the expected hash. The importing program will reject the code, causing the program to halt and reject, rather than continue compiling to the program's normal form.
+This way, Dhall's semantic hash provides security that imported code can never be updated in a manner which changes the importing program's semantics, regardless of how the imported code is refactored.
 
 \section*{Conclusion}
 
 Dhall is truly a unique language amid the design space of programming languages.
-Dhall meets multiple important industry uses cases and achieves those requirements by employing theoretical computer science principles.
-Dhall's reluctance to embrace Turing completeness and decision to instead require provable termination allows for Dhall to be confidently used in area's where programming features use hesitantly, if ever, adopted.
-Dhall's strongly normalizing property allows for semantic equivalence checks, providing both a theoretically interesting and practically applicable security feature to the language.
-Dhall's provable termination requirement has impacted the way recursion occurs in Dhall, permitting only predefined recursive forms on lists to be used in lieu of arbitrary user defined recursion.
-Lastly, we have seen how Dhall's requirement of all computations to be total has effected the possible arithmetic types and operations.
-I hope that this overview of the language has been enjoyable and piqued your curiosity.
-Perhaps the next time you encounter repetition while editing a configurations file, defining data in your favorite programming language, or are considering authoring your own build system, you will recall this discourse and reach for Dhall.
+It meets multiple important industry uses cases and achieves those requirements by employing theoretical computer science principles.
+Dhall's reluctance to embrace Turing completeness and decision to instead require provable termination allows Dhall to be confidently used in areas where programming features are hesitantly, if ever, adopted.
+Dhall's strongly normalizing property allows semantic equivalence checks, providing a both theoretically interesting and practically applicable security feature to the language.
+Dhall's provable termination requirement has impacted the way recursion occurs, permitting only predefined recursive forms on lists to be used in lieu of arbitrary user defined recursion.
+We also see how Dhall's requirement of all computations to be total has effected the possible arithmetic types and operations.
+
+I hope that this overview of the language has been enjoyable and piqued the readers' curiosity.
+Perhaps the next time you encounter repetition while editing a configurations file, defining data in your favorite programming language, or are considering authoring your own build system, you will recall this introduction and reach for Dhall.
 
 %----------------------------------------------------------------------------------------
 %	BIBLIOGRAPHY
